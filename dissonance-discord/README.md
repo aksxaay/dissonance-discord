@@ -74,3 +74,11 @@ to load .env files from the project directory
 Apparently I'm supposed to be using `yarn` and not `npm`
 
 also installed `discordjs/rest` and `discord-api-types`
+\
+\
+\
+\
+**Q1. What is a token, anyway?**
+> A token is essentially your bot's password; it's what your bot uses to login to Discord. With that said, it is vital that you do not ever share this token with >anybody, purposely or accidentally. If someone does manage to get a hold of your token, they can use your bot as if it were theirs—this means they can perform malicious >acts with it.
+
+**I think .gitignore is just relative path anyways**
