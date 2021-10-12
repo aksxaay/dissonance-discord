@@ -1,79 +1,118 @@
-/* 
+const { Client, Intents, MessageEmbed } = require("discord.js");
+const client = new Client({
+	intents: [
+		Intents.FLAGS.GUILDS,
+		Intents.FLAGS.GUILD_MESSAGES,
+		Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
+	],
+	partials: ["MESSAGE", "REACTION", "USER"],
+});
+const { token } = require("../config.json");
 
-This comes from 
-https://discordjs.guide/creating-your-bot/#creating-the-main-file
+const snipes = {};
+const editSnipes = {};
+const reactionSnipes = {};
 
+const formatEmoji = (emoji) => {
+	return !emoji.id || emoji.available
+		? emoji.toString() // bot has access or unicode emoji
+		: `[:${emoji.name}:](${emoji.url})`; // bot cannot use the emoji
+};
 
-*/
-// Require the necessary discord.js classes
-const { Client, Intents } = require('discord.js');
-const { token } = require('../config.json');
-
-// Create a new client instance
-const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
-
-// When the client is ready, run this code (only once)
-client.once('ready', () => {
-	console.log('Ready!');
+client.on("ready", () => {
+	console.log(`[sniper] :: Logged in as ${client.user.tag}.`);
 });
 
-// message event trigger
-client.on('messageCreate', (message) => {
-	console.log(message.content)
+client.on("messageDelete", async (message) => {
+	if (message.partial || (message.embeds.length && !message.content)) return; // content is null or deleted embed
+
+	snipes[message.channel.id] = {
+		author: message.author,
+		content: message.content,
+		createdAt: message.createdTimestamp,
+		image: message.attachments.first()
+			? message.attachments.first().proxyURL
+			: null,
+	};
 });
 
-// Replying to Commands /ping
-client.on('interactionCreate', async interaction => {
+client.on("messageUpdate", async (oldMessage, newMessage) => {
+	if (oldMessage.partial) return; // content is null
+
+	editSnipes[oldMessage.channel.id] = {
+		author: oldMessage.author,
+		content: oldMessage.content,
+		createdAt: newMessage.editedTimestamp,
+	};
+});
+
+client.on("messageReactionRemove", async (reaction, user) => {
+	if (reaction.partial) reaction = await reaction.fetch();
+
+	reactionSnipes[reaction.message.channel.id] = {
+		user: user,
+		emoji: reaction.emoji,
+		messageURL: reaction.message.url,
+		createdAt: Date.now(),
+	};
+});
+
+client.on("interactionCreate", async (interaction) => {
 	if (!interaction.isCommand()) return;
 
-	const { commandName } = interaction;
+	const channel =
+		interaction.options.getChannel("channel") || interaction.channel;
 
-	if (commandName === 'ping') {
-		await interaction.reply('Pong!');
-	} else if (commandName === 'server') {
-		await interaction.reply('Server info.');
-	} else if (commandName === 'user') {
-		await interaction.reply('User info.');
+	if (interaction.commandName === "snipe") {
+		const snipe = snipes[channel.id];
+
+		if (!snipe) return interaction.reply("There's nothing to snipe!");
+
+		const embed = new MessageEmbed()
+			.setAuthor(snipe.author.tag)
+			.setFooter(`#${channel.name}`)
+			.setTimestamp(snipe.createdAt);
+		snipe.content ? embed.setDescription(snipe.content) : null;
+		snipe.image ? embed.setImage(snipe.image) : null;
+
+		await interaction.reply({ embeds: [embed] });
+	} else if (interaction.commandName === "editsnipe") {
+		const snipe = editSnipes[channel.id];
+
+		await interaction.reply(
+			snipe
+				? {
+						embeds: [
+							new MessageEmbed()
+								.setDescription(snipe.content)
+								.setAuthor(snipe.author.tag)
+								.setFooter(`#${channel.name}`)
+								.setTimestamp(snipe.createdAt),
+						],
+				  }
+				: "There's nothing to snipe!"
+		);
+	} else if (interaction.commandName === "reactionsnipe") {
+		const snipe = reactionSnipes[channel.id];
+
+		await interaction.reply(
+			snipe
+				? {
+						embeds: [
+							new MessageEmbed()
+								.setDescription(
+									`reacted with ${formatEmoji(
+										snipe.emoji
+									)} on [this message](${snipe.messageURL})`
+								)
+								.setAuthor(snipe.user.tag)
+								.setFooter(`#${channel.name}`)
+								.setTimestamp(snipe.createdAt),
+						],
+				  }
+				: "There's nothing to snipe!"
+		);
 	}
 });
 
-// Server Info Command /server
-client.on('interactionCreate', async interaction => {
-	if (!interaction.isCommand()) return;
-
-	const { commandName } = interaction;
-
-	if (commandName === 'ping') {
-		await interaction.reply('Pong!');
-	} else if (commandName === 'server') {
-		await interaction.reply(`Server name: ${interaction.guild.name}\nTotal members: ${interaction.guild.memberCount}`);
-	} else if (commandName === 'user') {
-		await interaction.reply('User info.');
-	}
-});
-
-// User Info command /user
-client.on('interactionCreate', async interaction => {
-	if (!interaction.isCommand()) return;
-
-	const { commandName } = interaction;
-
-	if (commandName === 'ping') {
-		await interaction.reply('Pong!');
-	} else if (commandName === 'server') {
-		await interaction.reply(`Server name: ${interaction.guild.name}\nTotal members: ${interaction.guild.memberCount}`);
-	} else if (commandName === 'user') {
-		await interaction.reply(`Your tag: ${interaction.user.tag}\nYour id: ${interaction.user.id}`);
-	}
-});
-
-// Login to Discord with your client's token
-client.login(process.env.DISCORDJS_BOT_TOKEN);
-
-
-// INSTRUCTIONS
-/* 
-This is how you create a client instance for your Discord bot and login to Discord. The Intents.FLAGS.GUILDS intents option is necessary for your client to work properly.
-
-Open your terminal and run node index.js to start the process. If you see "Ready!" after a few seconds, you're good to go!
-*/
+client.login(token);
