@@ -26,6 +26,18 @@ const commands = [
 		name: "ping",
 		description: "Replies with pong!",
 	},
+	{
+		name: "server",
+		description: "Hopefully gives server info",
+	},
+	{
+		name: "user",
+		description: "Gives user info ig?",
+	},
+	{
+		name: "ephemeral",
+		description: "Ephemeral test command",
+	},
 ];
 
 // i had set the token to damn string bruh
