@@ -5,7 +5,7 @@
 	"main": "src/index.js",
 	"scripts": {
 		"register": "node scripts/register.js",
-		"bot": "node src/index.js",
+		"bot": "node src/sniper.js",
 		"prettier": "prettier --write \"**/*.js\""
 	},
 	"repository": {
@@ -23,6 +23,7 @@
 		"discord-api-types": "^0.23.1",
 		"discord.js": "^13.2.0",
 		"dotenv": "^10.0.0",
+		"node-fetch": "^3.0.0",
 		"nodemon": "^2.0.13"
 	}
 }
